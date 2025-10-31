@@ -2,7 +2,7 @@ public class Customers {
     private int customerId;
     private String name;
     private String email;
-    private Orders[] orders;
+    private LinkedList<Orders> orders;
     private int orderCount;
 
     // Max orders per customer (for demo, can be increased)
@@ -12,7 +12,7 @@ public class Customers {
         this.customerId = customerId;
         this.name = name;
         this.email = email;
-        this.orders = new Orders[MAX_ORDERS];
+        this.orders = new LinkedList<Orders>();
         this.orderCount = 0;
     }
 
@@ -20,18 +20,19 @@ public class Customers {
     // O(1) time
     public boolean addOrder(Orders order) {
         if (order == null || orderCount >= MAX_ORDERS) return false;
-        orders[orderCount++] = order;
+        orders.add(order);
         return true;
     }
 
     // Get order history as a String
     // O(n) time, n = orderCount
     public String getOrderHistory() {
-        if (orderCount == 0) return "No orders.";
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < orderCount; i++) {
-            sb.append("Order #").append(i + 1).append(": ").append(orders[i].toString());
-            if (i < orderCount - 1) sb.append(System.lineSeparator());
+        sb.append("Order History for ").append(name).append(":\n");
+        orders.resetCurrent();
+        while (orders.hasNext()) {
+            Orders ord = orders.getNext().getData();
+            sb.append(ord.toString()).append("\n");
         }
         return sb.toString();
     }
@@ -44,8 +45,12 @@ public class Customers {
     // Search for order by ID (linear search)
     // O(n) time
     public Orders getOrderById(int orderId) {
-        for (int i = 0; i < orderCount; i++) {
-            if (orders[i].getOrderId() == orderId) return orders[i];
+        orders.resetCurrent();
+        while (orders.hasNext()) {
+            Orders ord = orders.getNext().getData();
+            if (ord.getOrderId() == orderId) {
+                return ord;
+            }
         }
         return null;
     }

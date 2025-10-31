@@ -1,68 +1,81 @@
 public class Orders {
-	private int orderId;
-	private int customerId;
-	private Products[] products;
-	private int productCount;
-	private double totalPrice;
-	private String status; // "pending", "shipped", "delivered", "canceled"
-	private Date orderDate;
+    // Add enum for order status
+    public enum OrderStatus {
+        PENDING,
+        SHIPPED,
+        DELIVERED,
+        CANCELED
+    }
 
-	private static final int MAX_PRODUCTS = 100;
+    private int orderId;
+    private int customerId;
+    private LinkedList<Products> products;
+    private int productCount;
+    private double totalPrice;
+    private OrderStatus status; // Changed from String to OrderStatus
+    private Date orderDate;
 
-	public Orders(int orderId, int customerId, String orderDate) {
-		this.orderId = orderId;
-		this.customerId = customerId;
-		this.products = new Products[MAX_PRODUCTS];
-		this.productCount = 0;
-		this.totalPrice = 0.0;
-		this.status = "pending";
-		this.orderDate = new Date.fromString(orderDatestr); 
-	}
+    public Orders(int orderId, int customerId, String orderDate) {
+        this.orderId = orderId;
+        this.customerId = customerId;
+        this.products = new LinkedList<Products>();
+        this.productCount = 0;
+        this.totalPrice = 0.0;
+        this.status = OrderStatus.PENDING; // Set default status using enum
+        this.orderDate = new Date.fromString(orderDate); 
+    }
 
-	// Add product to order
-	// O(1) time
-	public boolean addProduct(Products product) {
-		if (product == null || productCount >= MAX_PRODUCTS) return false;
-        products[productCount++] = product;
-		totalPrice += product.getPrice();
-		return true;
-	}
+    // Update cancel order method
+    public void cancelOrder() {
+        this.status = OrderStatus.CANCELED;
+    }
 
-	// Cancel order
-	public void cancelOrder() {
-		this.status = "canceled";
-	}
+    // Update status method
+    public void updateStatus(OrderStatus newStatus) {
+        if (newStatus != null) {
+            this.status = newStatus;
+        }
+    }
 
-	// Update order status
-	public void updateStatus(String newStatus) {
-		if (newStatus != null) this.status = newStatus;
-	}
-    	// Getters
+    // Update getter
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    // Getters
 	public int getOrderId() { return orderId; }
 	public int getCustomerId() { return customerId; }
 	public double getTotalPrice() { return totalPrice; }
-	public String getStatus() { return status; }
 	public Date getOrderDate() { return orderDate; }
 	public int getProductCount() { return productCount; }
     
 	public Products[] getProducts() {
 		Products[] copy = new Products[productCount];
-		for (int i = 0; i < productCount; i++) copy[i] = products[i];
+		if (products == null || productCount == 0) return copy;
+		products.resetCurrent();
+		int i = 0;
+		while (products.hasNext() && i < copy.length) {
+			Products prod = products.getNext().getData();
+			copy[i++] = prod;
+		}
 		return copy;
 	}
 
-	// toString for order summary
+	// toString for order summary (IT IS A LINKED LIST!)
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("OrderID: ").append(orderId)
-		  .append(", Date: ").append(orderDate)
+		sb.append("Order ID: ").append(orderId)
+		  .append(", Customer ID: ").append(customerId)
+		  .append(", Date: ").append(orderDate.toString())
 		  .append(", Status: ").append(status)
-		  .append(", Total: $").append(totalPrice)
+		  .append(", Total Price: $").append(String.format("%.2f", totalPrice))
 		  .append(", Products: [");
-		for (int i = 0; i < productCount; i++) {
-			sb.append(products[i].getName());
-			if (i < productCount - 1) sb.append(", ");
+		products.resetCurrent();
+		while (products.hasNext()) {
+			Products prod = products.getNext().getData();
+			sb.append(prod.getName()).append(" ($").append(String.format("%.2f", prod.getPrice())).append("), ");
 		}
+		if (productCount > 0) sb.setLength(sb.length() - 2); // Remove last comma
 		sb.append("]");
 		return sb.toString();
 	}
