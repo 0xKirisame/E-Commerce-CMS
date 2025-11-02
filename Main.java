@@ -1,247 +1,230 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
-public class Main {
-    private static Scanner scanner = new Scanner(System.in);
-    private static LinkedList<Products> productList = new LinkedList<>();
-    private static LinkedList<Orders> orderList = new LinkedList<>();
+/**
+ * Core service class containing business logic and data loading capabilities.
+ * This class orchestrates the loading of data from CSV files and populates the
+ * object model.
+ */
+public class ECommerceService {
 
-    public static void main(String[] args) {
-        boolean running = true;
-        while (running) {
-            System.out.println("\n=== E-Commerce CMS Debug Menu ===");
-            System.out.println("1. Product Management");
-            System.out.println("2. Order Management");
-            System.out.println("3. Review Management");
-            System.out.println("4. Run All Tests");
-            System.out.println("0. Exit");
-            System.out.print("Choose an option: ");
+    // Master lists for top-level objects
+    private LinkedList<Products> productList;
+    private LinkedList<Customers> customerList;
 
-            int choice = getIntInput();
-            switch (choice) {
-                case 1: productMenu(); break;
-                case 2: orderMenu(); break;
-                case 3: reviewMenu(); break;
-                case 4: runAllTests(); break;
-                case 0: running = false; break;
-                default: System.out.println("Invalid option!");
-            }
-        }
-        scanner.close();
+    public ECommerceService() {
+        this.productList = new LinkedList<>();
+        this.customerList = new LinkedList<>();
     }
 
-    private static void productMenu() {
-        while (true) {
-            System.out.println("\n=== Product Management ===");
-            System.out.println("1. Add Product");
-            System.out.println("2. Update Product");
-            System.out.println("3. List All Products");
-            System.out.println("4. Check Stock");
-            System.out.println("0. Back");
+    // --- Data Loader Methods ---
+
+    /**
+     * Loads products from the specified CSV file.
+     * @param fileName The path to the prodcuts.csv file.
+     */
+    public void loadProductsFromCSV(String fileName) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            br.readLine(); // Skip header
+            while ((line = br.readLine()) != null) {
+                String[] v = line.split(",");
+                if (v.length == 4) {
+                    try {
+                        productList.add(new Products(Integer.parseInt(v[0]), v[1], Double.parseDouble(v[2]), Integer.parseInt(v[3])));
+                    } catch (NumberFormatException e) { 
+                        System.err.println("Error parsing product line: " + line); 
+                    }
+                }
+            }
+        } catch (IOException e) { 
+            System.err.println("Error reading file: " + fileName); 
+        }
+    }
+
+    /**
+     * Loads customers from the specified CSV file.
+     * @param fileName The path to the customers.csv file.
+     */
+    public void loadCustomersFromCSV(String fileName) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            br.readLine(); // Skip header
+            while ((line = br.readLine()) != null) {
+                String[] v = line.split(",");
+                if (v.length == 3) {
+                    try {
+                        customerList.add(new Customers(Integer.parseInt(v[0]), v[1], v[2]));
+                    } catch (NumberFormatException e) { 
+                        System.err.println("Error parsing customer line: " + line); 
+                    }
+                }
+            }
+        } catch (IOException e) { 
+            System.err.println("Error reading file: " + fileName); 
+        }
+    }
+
+    /**
+     * Loads orders from the specified CSV file.
+     * Depends on products AND customers being loaded first.
+     * @param fileName The path to the orders.csv file.
+     */
+    public void loadOrdersFromCSV(String fileName) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            br.readLine(); // Skip header row
             
-            int choice = getIntInput();
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter product name: ");
-                    String name = scanner.nextLine();
-                    System.out.print("Enter price: ");
-                    double price = getDoubleInput();
-                    System.out.print("Enter stock: ");
-                    int stock = getIntInput();
-                    System.out.println(productList.getSize() + " "+ productList.getSize()+1);
-                    Products newProduct = new Products(productList.getSize() + 1, name, price, stock);
-                    productList.add(newProduct);
-                    System.out.println("Product added successfully!");
-                    break;
-                case 2:
-                    // Update product implementation
-                    break;
-                case 3:
-                    listProducts();
-                    break;
-                case 4:
-                    checkProductStock();
-                    break;
-                case 0:
-                    return;
+            while ((line = br.readLine()) != null) {
+                String[] values = line.split(",");
+                if (values.length == 6) {
+                    try {
+                        // 1. Parse basic order info
+                        int orderId = Integer.parseInt(values[0]);
+                        int customerId = Integer.parseInt(values[1]);
+                        String productIdsStr = values[2].replace("\"", ""); // "101;102"
+                        // values[3] (totalPrice) is ignored, as the Order class calculates it
+                        String orderDate = values[4];
+                        String statusStr = values[5];
+
+                        // 2. Find the correct customer
+                        Customers customer = findCustomerById(customerId);
+                        if (customer == null) {
+                            System.err.println("Warning: Customer ID " + customerId + " not found for order " + orderId);
+                            continue; // Skip this order
+                        }
+
+                        // 3. Create the Order object
+                        Orders newOrder = new Orders(orderId, customerId, orderDate);
+
+                        // 4. Parse Product IDs, find them, and add them to the order
+                        String[] productIds = productIdsStr.split(";");
+                        for (String pidStr : productIds) {
+                            int productId = Integer.parseInt(pidStr);
+                            Products product = findProductById(productId);
+                            if (product != null) {
+                                newOrder.addProduct(product); // This also updates the order's total price
+                            } else {
+                                System.err.println("Warning: Product ID " + productId + " not found for order " + orderId);
+                            }
+                        }
+                        
+                        // 5. Set status and add the order to the CUSTOMER
+                        newOrder.updateStatus(stringToOrderStatus(statusStr));
+                        customer.addOrder(newOrder); 
+                        
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error parsing order line: " + line + " - " + e.getMessage());
+                    }
+                }
             }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + fileName + " - " + e.getMessage());
         }
     }
-
-    private static void orderMenu() {
-        while (true) {
-            System.out.println("\n=== Order Management ===");
-            System.out.println("1. Create Order");
-            System.out.println("2. Update Order Status");
-            System.out.println("3. List All Orders");
-            System.out.println("4. Cancel Order");
-            System.out.println("0. Back");
-            
-            int choice = getIntInput();
-            switch (choice) {
-                case 1:
-                    createOrder();
-                    break;
-                case 2:
-                    updateOrderStatus();
-                    break;
-                case 3:
-                    listOrders();
-                    break;
-                case 4:
-                    cancelOrder();
-                    break;
-                case 0:
-                    return;
+    
+    /**
+     * Loads reviews from the specified CSV file.
+     * Depends on products being loaded first.
+     * @param fileName The path to the reviews.csv file.
+     */
+    public void loadReviewsFromCSV(String fileName) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            br.readLine(); // Skip header
+            while ((line = br.readLine()) != null) {
+                // Split with a limit of 5 to keep the comment (which may have commas) intact
+                String[] v = line.split(",", 5); 
+                if (v.length == 5) {
+                    try {
+                        int reviewId = Integer.parseInt(v[0]);
+                        int productId = Integer.parseInt(v[1]);
+                        int customerId = Integer.parseInt(v[2]);
+                        int rating = Integer.parseInt(v[3]);
+                        String comment = v[4].replace("\"", ""); // Remove quotes
+                        
+                        // Find the product and add the review to it
+                        Products product = findProductById(productId);
+                        if (product != null) {
+                            product.addReview(reviewId, customerId, rating, comment);
+                        } else {
+                            System.err.println("Warning: Product ID " + productId + " not found for review " + reviewId);
+                        }
+                    } catch (NumberFormatException e) { 
+                        System.err.println("Error parsing review line: " + line); 
+                    }
+                }
             }
+        } catch (IOException e) { 
+            System.err.println("Error reading file: " + fileName); 
         }
     }
 
-    private static void reviewMenu() {
-        while (true) {
-            System.out.println("\n=== Review Management ===");
-            System.out.println("1. Add Review");
-            System.out.println("2. List Product Reviews");
-            System.out.println("3. Show Average Rating");
-            System.out.println("0. Back");
-            
-            int choice = getIntInput();
-            switch (choice) {
-                case 1:
-                    addReview();
-                    break;
-                case 2:
-                    listReviews();
-                    break;
-                case 3:
-                    showAverageRating();
-                    break;
-                case 0:
-                    return;
+    // --- Helper Methods ---
+
+    /**
+     * Converts a status string (from CSV) to an OrderStatus enum.
+     * @param statusStr The string to convert (e.g., "Pending", "Shipped").
+     * @return The corresponding OrderStatus enum.
+     */
+    private Orders.OrderStatus stringToOrderStatus(String statusStr) {
+        switch (statusStr.toUpperCase()) {
+            case "SHIPPED": return Orders.OrderStatus.SHIPPED;
+            case "DELIVERED": return Orders.OrderStatus.DELIVERED;
+            case "CANCELLED": // Handle common spelling
+            case "CANCELED": return Orders.OrderStatus.CANCELED;
+            case "PENDING":
+            default:
+                return Orders.OrderStatus.PENDING;
+        }
+    }
+
+    // --- Getter Methods ---
+    public LinkedList<Products> getAllProducts() { return productList; }
+    public LinkedList<Customers> getAllCustomers() { return customerList; }
+
+    // --- Business Logic Finders ---
+
+    /**
+     * Finds a product in the master list by its ID.
+     * @param productId The ID of the product to find.
+     * @return The Products object if found, or null otherwise.
+     */
+    public Products findProductById(int productId) {
+        Node<Products> productNode = productList.searchById(productId);
+        return (productNode != null) ? productNode.getData() : null;
+    }
+
+    /**
+     * Finds a customer in the master list by their ID.
+     * @param customerId The ID of the customer to find.
+     * @return The Customers object if found, or null otherwise.
+     */
+    public Customers findCustomerById(int customerId) {
+        Node<Customers> customerNode = customerList.searchById(customerId);
+        return (customerNode != null) ? customerNode.getData() : null;
+    }
+
+    /**
+     * Finds an order by its ID by searching through all customers.
+     * This is less efficient (O(Customers * Orders)) but reflects the new data structure.
+     * @param orderId The ID of the order to find.
+     * @return The Orders object if found, or null otherwise.
+     */
+    public Orders findOrderById(int orderId) {
+        // Must iterate through all customers, then check their orders
+        Node<Customers> customerNode = customerList.getHead();
+        while (customerNode != null) {
+            Customers customer = customerNode.getData();
+            Orders order = customer.getOrderById(orderId); // Use the customer's built-in search
+            if (order != null) {
+                return order; // Found it
             }
+            customerNode = customerNode.getNext();
         }
-    }
-
-    // Helper methods
-    private static int getIntInput() {
-        while (true) {
-            try {
-                return Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.print("Please enter a valid number: ");
-            }
-        }
-    }
-
-    private static double getDoubleInput() {
-        while (true) {
-            try {
-                return Double.parseDouble(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.print("Please enter a valid number: ");
-            }
-        }
-    }
-
-    private static void listProducts() {
-        if (productList.getSize() == 0) {
-            System.out.println("No products available.");
-            return;
-        }
-        
-        // Reset the current pointer
-        productList.resetCurrent();
-        
-        // Get and display the first node
-        Node<Products> current = productList.getHead();
-        while (current != null) {
-            Products product = current.getData();
-            System.out.printf("ID: %d, Name: %s, Price: $%.2f, Stock: %d%n",
-                product.getProductId(), 
-                product.getName(), 
-                product.getPrice(), 
-                product.getStock());
-            current = current.getNext();
-        }
-    }
-
-    private static void checkProductStock() {
-        System.out.print("Enter product ID: ");
-        int id = getIntInput();
-        System.out.println(productList.searchById(id).getData().getStock());
-    }
-
-    private static void createOrder() {
-        System.out.print("Enter customer ID: ");
-        int customerId = getIntInput();
-        Orders newOrder = new Orders(orderList.getSize() + 1, customerId, 
-            java.time.LocalDate.now().toString());
-        orderList.add(newOrder);
-        System.out.println("Order created successfully!");
-    }
-
-    private static void listOrders() {
-        if (orderList.getSize() == 0) {
-            System.out.println("No orders available.");
-            return;
-        }
-        orderList.resetCurrent();
-        while (orderList.hasNext()) {
-            Orders order = orderList.getNext().getData();
-            System.out.println(order.toString());
-        }
-    }
-
-    private static void updateOrderStatus() {
-        System.out.print("Enter order ID: ");
-        int id = getIntInput();
-        // Update order status implementation
-    }
-
-    private static void cancelOrder() {
-        System.out.print("Enter order ID: ");
-        int id = getIntInput();
-        // Cancel order implementation
-    }
-
-    private static void addReview() {
-        System.out.print("Enter product ID: ");
-        int productId = getIntInput();
-        // Add review implementation
-    }
-
-    private static void listReviews() {
-        System.out.print("Enter product ID: ");
-        int productId = getIntInput();
-        // List reviews implementation
-    }
-
-    private static void showAverageRating() {
-        System.out.print("Enter product ID: ");
-        int productId = getIntInput();
-        // Show average rating implementation
-    }
-
-    private static void runAllTests() {
-        System.out.println("\nRunning all tests...");
-        // Add test cases here
-        testProductCreation();
-        testOrderCreation();
-        testReviewSystem();
-        System.out.println("All tests completed!");
-    }
-
-    private static void testProductCreation() {
-        System.out.println("Testing product creation...");
-        // Add product test cases
-    }
-
-    private static void testOrderCreation() {
-        System.out.println("Testing order creation...");
-        // Add order test cases
-    }
-
-    private static void testReviewSystem() {
-        System.out.println("Testing review system...");
-        // Add review test cases
+        return null; // Not found anywhere
     }
 }
+
+
