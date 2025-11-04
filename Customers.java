@@ -1,3 +1,9 @@
+/**
+ * Represents a Customer.
+ * This class holds customer details and a list of their orders.
+ *
+ * (MODIFIED to use custom LinkedList instead of an array to follow project requirements)
+ */
 public class Customers {
     private int customerId;
     private String name;
@@ -92,3 +98,4 @@ public class Customers {
     public String getName() { return name; }
     public String getEmail() { return email; }
 }
+
