@@ -25,8 +25,19 @@ public class Products {
      * @param comment The text content of the review.
      */
     public void addReview(int reviewId, int customerId, int rating, String comment) {
-        Reviews newReview = new Reviews(reviewId, this.productId, customerId, rating, comment);
-        this.reviews.add(newReview);
+        try {
+            // Validate rating (assume 1..5 scale)
+            int r = rating;
+            if (r < 1) r = 1;
+            if (r > 5) r = 5;
+
+            String c = (comment == null) ? "" : comment;
+            Reviews newReview = new Reviews(reviewId, this.productId, customerId, r, c);
+            this.reviews.add(newReview);
+        } catch (Exception e) {
+            // Catch any unexpected error when adding a review to avoid crashing the loader
+            System.err.println("Failed to add review " + reviewId + " for product " + this.productId + ": " + e.getMessage());
+        }
     }
 
     /**

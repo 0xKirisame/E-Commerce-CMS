@@ -21,8 +21,12 @@ public class Reviews {
         this.reviewId = reviewId;
         this.productId = productId;
         this.customerId = customerId;
-        this.rating = rating;
-        this.comment = comment;
+        // Ensure rating is within expected bounds
+        int r = rating;
+        if (r < 1) r = 1;
+        if (r > 5) r = 5;
+        this.rating = r;
+        this.comment = (comment == null) ? "" : comment;
     }
 
     // --- Getters ---
@@ -57,4 +61,3 @@ public class Reviews {
     }
 }   
    
-

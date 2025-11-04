@@ -1,3 +1,6 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
 public class Orders {
     // Enum for managing order status
     public enum OrderStatus {
@@ -13,7 +16,7 @@ public class Orders {
     private int productCount;
     private double totalPrice;
     private OrderStatus status;
-    private Date orderDate; // Uses your custom Date class
+    private LocalDate orderDate;
 
     public Orders(int orderId, int customerId, String orderDate) {
         this.orderId = orderId;
@@ -24,7 +27,15 @@ public class Orders {
         this.status = OrderStatus.PENDING; // Default status
         // --- THIS IS THE FIX ---
         // It should be Date.fromString(orderDate), not new Date.fromString(orderDatestr)
-        this.orderDate = Date.fromString(orderDate); 
+        if (orderDate == null) {
+            this.orderDate = null;
+        } else {
+            try {
+                this.orderDate = LocalDate.parse(orderDate);
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("Invalid order date: " + orderDate);
+            }
+        }
     }
     
     /**
@@ -32,10 +43,20 @@ public class Orders {
      * @param product The Products object to add.
      */
     public void addProduct(Products product) {
-        if (product != null) {
+        try {
+            if (product == null) return;
+            // Defensive price check
+            double price = product.getPrice();
+            if (Double.isNaN(price) || Double.isInfinite(price) || price < 0) {
+                System.err.println("Warning: product with invalid price added to order " + orderId + ": " + price);
+                price = 0.0;
+            }
+
             this.products.add(product);
             this.productCount++;
-            this.totalPrice += product.getPrice(); // Recalculate total
+            this.totalPrice += price; // Recalculate total
+        } catch (Exception e) {
+            System.err.println("Failed to add product to order " + orderId + ": " + e.getMessage());
         }
     }
 
@@ -55,7 +76,7 @@ public class Orders {
     public int getOrderId() { return orderId; }
     public int getCustomerId() { return customerId; }
     public double getTotalPrice() { return totalPrice; }
-    public Date getOrderDate() { return orderDate; }
+    public LocalDate getOrderDate() { return orderDate; }
     public int getProductCount() { return productCount; }
     
     /**
@@ -79,7 +100,7 @@ public class Orders {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Order ID: ").append(orderId)
-          .append(", Date: ").append(orderDate.toString())
+          .append(", Date: ").append(orderDate != null ? orderDate.toString() : "Unknown Date")
           .append(", Status: ").append(status)
           .append(", Total: $").append(String.format("%.2f", totalPrice))
           .append(", Products: [");

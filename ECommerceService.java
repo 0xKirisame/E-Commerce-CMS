@@ -1,6 +1,8 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 /**
  * Main application class for the E-Commerce Management System.
@@ -80,23 +82,37 @@ public class ECommerceService {
      * Format: customerId,name,email
      */
     private void loadCustomers(String filePath) throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(filePath));
-        scanner.nextLine(); // Skip header row
-        
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            String[] parts = line.split(",");
-            
-            if (parts.length < 3) continue; // Skip bad data
-            
-            int id = Integer.parseInt(parts[0]);
-            String name = parts[1];
-            String email = parts[2];
-            
-            Customers customer = new Customers(id, name, email);
-            allCustomers.add(customer);
+        File f = new File(filePath);
+        if (!f.exists()) throw new FileNotFoundException(filePath);
+
+        try (Scanner scanner = new Scanner(f)) {
+            // Skip header if present
+            if (scanner.hasNextLine()) scanner.nextLine();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split(",", -1);
+                try {
+                    if (parts.length < 3) {
+                        System.err.println("Skipping malformed customer line: " + line);
+                        continue;
+                    }
+
+                    int id = Integer.parseInt(parts[0].trim());
+                    String name = parts[1].trim();
+                    String email = parts[2].trim();
+
+                    Customers customer = new Customers(id, name, email);
+                    allCustomers.add(customer);
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Skipping customer with invalid number: " + line + " (" + nfe.getMessage() + ")");
+                } catch (Exception e) {
+                    System.err.println("Skipping customer due to unexpected error: " + e.getMessage());
+                }
+            }
         }
-        scanner.close();
     }
 
     /**
@@ -104,24 +120,37 @@ public class ECommerceService {
      * Format: productId,name,price,stock
      */
     private void loadProducts(String filePath) throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(filePath));
-        scanner.nextLine(); // Skip header row
-        
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            String[] parts = line.split(",");
-            
-            if (parts.length < 4) continue; // Skip bad data
-            
-            int id = Integer.parseInt(parts[0]);
-            String name = parts[1];
-            double price = Double.parseDouble(parts[2]);
-            int stock = Integer.parseInt(parts[3]);
-            
-            Products product = new Products(id, name, price, stock);
-            allProducts.add(product);
+        File f = new File(filePath);
+        if (!f.exists()) throw new FileNotFoundException(filePath);
+
+        try (Scanner scanner = new Scanner(f)) {
+            if (scanner.hasNextLine()) scanner.nextLine(); // Skip header
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split(",", -1);
+                try {
+                    if (parts.length < 4) {
+                        System.err.println("Skipping malformed product line: " + line);
+                        continue;
+                    }
+
+                    int id = Integer.parseInt(parts[0].trim());
+                    String name = parts[1].trim();
+                    double price = Double.parseDouble(parts[2].trim());
+                    int stock = Integer.parseInt(parts[3].trim());
+
+                    Products product = new Products(id, name, price, stock);
+                    allProducts.add(product);
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Skipping product with invalid number: " + line + " (" + nfe.getMessage() + ")");
+                } catch (Exception e) {
+                    System.err.println("Skipping product due to unexpected error: " + e.getMessage());
+                }
+            }
         }
-        scanner.close();
     }
 
     /**
@@ -129,57 +158,81 @@ public class ECommerceService {
      * Format: orderId,customerId,productIds,totalPrice,orderDate,status
      */
     private void loadOrders(String filePath) throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(filePath));
-        scanner.nextLine(); // Skip header row
-        
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            String[] parts = line.split(",");
-            
-            if (parts.length < 6) continue; // Skip bad data
+        File f = new File(filePath);
+        if (!f.exists()) throw new FileNotFoundException(filePath);
 
-            int orderId = Integer.parseInt(parts[0]);
-            int customerId = Integer.parseInt(parts[1]);
-            String productIdsStr = parts[2].replace("\"", ""); // Remove quotes
-            // parts[3] is totalPrice, but we calculate it from products
-            String orderDate = parts[4];
-            String statusStr = parts[5];
+        try (Scanner scanner = new Scanner(f)) {
+            if (scanner.hasNextLine()) scanner.nextLine(); // Skip header
 
-            // 1. Find the customer for this order
-            Customers customer = findCustomerById(customerId);
-            if (customer == null) {
-                // System.out.println("Warning: Skipping order " + orderId + " - Customer " + customerId + " not found.");
-                continue; // Skip order if customer doesn't exist
-            }
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                if (line.isEmpty()) continue;
 
-            // 2. Create the order
-            Orders order = new Orders(orderId, customerId, orderDate);
-            
-            // 3. Set order status
-            try {
-                Orders.OrderStatus status = Orders.OrderStatus.valueOf(statusStr.toUpperCase());
-                order.updateStatus(status);
-            } catch (IllegalArgumentException e) {
-                order.updateStatus(Orders.OrderStatus.PENDING); // Default
-            }
+                String[] parts = line.split(",", -1);
+                try {
+                    if (parts.length < 6) {
+                        System.err.println("Skipping malformed order line: " + line);
+                        continue;
+                    }
 
-            // 4. Find and add products to the order
-            String[] productIds = productIdsStr.split(";");
-            for (String pidStr : productIds) {
-                int productId = Integer.parseInt(pidStr);
-                Products product = findProductById(productId);
-                if (product != null) {
-                    order.addProduct(product);
-                } else {
-                    // System.out.println("Warning: Product " + productId + " for order " + orderId + " not found.");
+                    int orderId = Integer.parseInt(parts[0].trim());
+                    int customerId = Integer.parseInt(parts[1].trim());
+                    String productIdsStr = parts[2].replace("\"", ""); // Remove quotes
+                    // parts[3] is totalPrice, but we calculate it from products
+                    String orderDate = parts[4].trim();
+                    String statusStr = parts[5].trim();
+
+                    // 1. Find the customer for this order
+                    Customers customer = findCustomerById(customerId);
+                    if (customer == null) {
+                        System.err.println("Skipping order " + orderId + " - Customer " + customerId + " not found.");
+                        continue; // Skip order if customer doesn't exist
+                    }
+
+                    // 2. Create the order (Orders will parse the date)
+                    Orders order;
+                    try {
+                        order = new Orders(orderId, customerId, orderDate);
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Skipping order " + orderId + " due to invalid date: " + orderDate);
+                        continue;
+                    }
+
+                    // 3. Set order status
+                    try {
+                        Orders.OrderStatus status = Orders.OrderStatus.valueOf(statusStr.toUpperCase());
+                        order.updateStatus(status);
+                    } catch (IllegalArgumentException e) {
+                        order.updateStatus(Orders.OrderStatus.PENDING); // Default
+                    }
+
+                    // 4. Find and add products to the order
+                    String[] productIds = productIdsStr.split(";");
+                    for (String pidStr : productIds) {
+                        try {
+                            if (pidStr == null || pidStr.trim().isEmpty()) continue;
+                            int productId = Integer.parseInt(pidStr.trim());
+                            Products product = findProductById(productId);
+                            if (product != null) {
+                                order.addProduct(product);
+                            } else {
+                                System.err.println("Warning: Product " + productId + " for order " + orderId + " not found.");
+                            }
+                        } catch (NumberFormatException nfe) {
+                            System.err.println("Warning: invalid product id '" + pidStr + "' in order " + orderId + " (" + nfe.getMessage() + ")");
+                        }
+                    }
+
+                    // 5. Add the completed order to the master list and the customer
+                    allOrders.add(order);
+                    customer.addOrder(order);
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Skipping order with invalid number: " + line + " (" + nfe.getMessage() + ")");
+                } catch (Exception e) {
+                    System.err.println("Skipping order due to unexpected error: " + e.getMessage());
                 }
             }
-            
-            // 5. Add the completed order to the master list and the customer
-            allOrders.add(order);
-            customer.addOrder(order);
         }
-        scanner.close();
     }
 
     /**
@@ -187,35 +240,48 @@ public class ECommerceService {
      * Format: reviewId,productId,customerId,rating,comment
      */
     private void loadReviews(String filePath) throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(filePath));
-        scanner.nextLine(); // Skip header row
-        
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            
-            // Use split with a limit of 5 to handle commas in the comment
-            String[] parts = line.split(",", 5); 
-            
-            if (parts.length < 5) continue; // Skip bad data
-            
-            int reviewId = Integer.parseInt(parts[0]);
-            int productId = Integer.parseInt(parts[1]);
-            int customerId = Integer.parseInt(parts[2]);
-            int rating = Integer.parseInt(parts[3]);
-            String comment = parts[4].replace("\"", ""); // Remove quotes
+        File f = new File(filePath);
+        if (!f.exists()) throw new FileNotFoundException(filePath);
 
-            // 1. Find the product for this review
-            Products product = findProductById(productId);
-            if (product == null) {
-                // System.out.println("Warning: Skipping review " + reviewId + " - Product " + productId + " not found.");
-                continue; // Skip review if product doesn't exist
+        try (Scanner scanner = new Scanner(f)) {
+            if (scanner.hasNextLine()) scanner.nextLine(); // Skip header
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                if (line.isEmpty()) continue;
+
+                // Use split with a limit of 5 to handle commas in the comment
+                String[] parts = line.split(",", 5);
+
+                try {
+                    if (parts.length < 5) {
+                        System.err.println("Skipping malformed review line: " + line);
+                        continue;
+                    }
+
+                    int reviewId = Integer.parseInt(parts[0].trim());
+                    int productId = Integer.parseInt(parts[1].trim());
+                    int customerId = Integer.parseInt(parts[2].trim());
+                    int rating = Integer.parseInt(parts[3].trim());
+                    String comment = parts[4].replace("\"", "").trim(); // Remove quotes
+
+                    // 1. Find the product for this review
+                    Products product = findProductById(productId);
+                    if (product == null) {
+                        System.err.println("Skipping review " + reviewId + " - Product " + productId + " not found.");
+                        continue; // Skip review if product doesn't exist
+                    }
+
+                    // 2. Add the review to the product
+                    // This calls the addReview method in your Products class
+                    product.addReview(reviewId, customerId, rating, comment);
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Skipping review with invalid number: " + line + " (" + nfe.getMessage() + ")");
+                } catch (Exception e) {
+                    System.err.println("Skipping review due to unexpected error: " + e.getMessage());
+                }
             }
-
-            // 2. Add the review to the product
-            // This calls the addReview method in your Products class
-            product.addReview(reviewId, customerId, rating, comment);
         }
-        scanner.close();
     }
 
     // ===================================================================
@@ -300,7 +366,7 @@ public class ECommerceService {
                     System.out.println("Invalid choice. Please try again.");
             }
         }
-        scanner.close();
+        // Do NOT close the scanner wrapping System.in - closing it will close System.in for the JVM.
     }
 
     /**
@@ -318,16 +384,23 @@ public class ECommerceService {
         System.out.println("\n--- Find Orders Between Dates ---");
         try {
             System.out.print("Enter Start Date (YYYY-MM-DD): ");
-            Date startDate = Date.fromString(scanner.nextLine());
-            
-            System.out.print("Enter End Date (YYYY-MM-DD): ");
-            Date endDate = Date.fromString(scanner.nextLine());
-            
-            if (startDate == null || endDate == null) {
+            LocalDate startDate;
+            try {
+                startDate = LocalDate.parse(scanner.nextLine().trim());
+            } catch (DateTimeParseException e) {
                 System.out.println("Invalid date format.");
                 return;
             }
-            
+
+            System.out.print("Enter End Date (YYYY-MM-DD): ");
+            LocalDate endDate;
+            try {
+                endDate = LocalDate.parse(scanner.nextLine().trim());
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format.");
+                return;
+            }
+
             System.out.println("\nSearching for orders from " + startDate + " to " + endDate + "...");
             displayOrdersBetweenDates(startDate, endDate);
             
@@ -440,16 +513,18 @@ public class ECommerceService {
      * - The date comparison inside the loop is O(1).
      * - Total complexity is O(O), a linear scan of all orders.
      */
-    public void displayOrdersBetweenDates(Date startDate, Date endDate) {
+    public void displayOrdersBetweenDates(LocalDate startDate, LocalDate endDate) {
         int count = 0;
         allOrders.resetCurrent();
         
         while (allOrders.hasNext()) {
             Orders order = allOrders.getNext().getData();
-            Date orderDate = order.getOrderDate();
+            LocalDate orderDate = order.getOrderDate();
+            if (orderDate == null) {
+                continue;
+            }
 
-            // Check if (orderDate >= startDate) AND (orderDate <= endDate)
-            if (orderDate.compareTo(startDate) >= 0 && orderDate.compareTo(endDate) <= 0) {
+            if (!orderDate.isBefore(startDate) && !orderDate.isAfter(endDate)) {
                 System.out.println(order.toString());
                 count++;
             }
@@ -525,4 +600,3 @@ public class ECommerceService {
         }
     }
 }
-
