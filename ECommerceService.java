@@ -4,59 +4,34 @@ import java.util.Scanner;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
-/**
- * Main application class for the E-Commerce Management System.
- * * This class loads data from CSV files, links the data objects,
- * and provides a menu-driven interface for statistical queries
- * as required by the CSC 212 project.
- *
- * To compile (from terminal, in the same folder as all your .java files):
- * javac *.java
- *
- * To run:
- * java ECommerceService
- */
+// main class to handle system stuff
 public class ECommerceService {
 
-    // Master lists to hold all data, using your custom LinkedList
+    // store everything in lists
     private LinkedList<Customers> allCustomers;
     private LinkedList<Products> allProducts;
     private LinkedList<Orders> allOrders;
-    // We don't need a master list for Reviews, as they will be
-    // loaded directly into their corresponding Products.
+    // reviews go inside products
 
-    /**
-     * Constructor: Initializes the master lists.
-     */
+    // init lists when starting
     public ECommerceService() {
         allCustomers = new LinkedList<>();
         allProducts = new LinkedList<>();
         allOrders = new LinkedList<>();
     }
-
-    /**
-     * Main entry point for the application.
-     */
     public static void main(String[] args) {
         ECommerceService service = new ECommerceService();
         service.loadAllData();
         service.runMainMenu();
     }
 
-    // ===================================================================
-    // 1. DATA LOADING METHODS
-    // ===================================================================
-
-    /**
-     * Main data loader. Calls individual loaders for each CSV file.
-     * Includes basic error handling.
-     */
+    // load all data from files
     public void loadAllData() {
         try {
             System.out.println("Loading data...");
             // Load master data first
             loadCustomers("customers.csv");
-            // NOTE: Your file is named "prodcuts.csv", not "products.csv"
+            // NOTE: doctor typed file name as "prodcuts.csv", not "products.csv"
             loadProducts("prodcuts.csv"); 
             
             // Load dependent data next
@@ -77,10 +52,7 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * Loads customer data from customers.csv
-     * Format: customerId,name,email
-     */
+    // read customer data from csv
     private void loadCustomers(String filePath) throws FileNotFoundException {
         File f = new File(filePath);
         if (!f.exists()) throw new FileNotFoundException(filePath);
@@ -115,16 +87,13 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * Loads product data from prodcuts.csv
-     * Format: productId,name,price,stock
-     */
+    // read product data from csv
     private void loadProducts(String filePath) throws FileNotFoundException {
         File f = new File(filePath);
         if (!f.exists()) throw new FileNotFoundException(filePath);
 
         try (Scanner scanner = new Scanner(f)) {
-            if (scanner.hasNextLine()) scanner.nextLine(); // Skip header
+            if (scanner.hasNextLine()) scanner.nextLine();
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine().trim();
@@ -153,10 +122,7 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * Loads order data from orders.csv and links to customers and products.
-     * Format: orderId,customerId,productIds,totalPrice,orderDate,status
-     */
+    // load orders and link to customers/products
     private void loadOrders(String filePath) throws FileNotFoundException {
         File f = new File(filePath);
         if (!f.exists()) throw new FileNotFoundException(filePath);
@@ -235,10 +201,7 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * Loads review data from reviews.csv and links to products.
-     * Format: reviewId,productId,customerId,rating,comment
-     */
+    // add reviews to products
     private void loadReviews(String filePath) throws FileNotFoundException {
         File f = new File(filePath);
         if (!f.exists()) throw new FileNotFoundException(filePath);
@@ -250,7 +213,7 @@ public class ECommerceService {
                 String line = scanner.nextLine().trim();
                 if (line.isEmpty()) continue;
 
-                // Use split with a limit of 5 to handle commas in the comment
+                // Use split with a limit of 5 to handle commas in the comment, I think.
                 String[] parts = line.split(",", 5);
 
                 try {
@@ -273,7 +236,6 @@ public class ECommerceService {
                     }
 
                     // 2. Add the review to the product
-                    // This calls the addReview method in your Products class
                     product.addReview(reviewId, customerId, rating, comment);
                 } catch (NumberFormatException nfe) {
                     System.err.println("Skipping review with invalid number: " + line + " (" + nfe.getMessage() + ")");
@@ -284,15 +246,7 @@ public class ECommerceService {
         }
     }
 
-    // ===================================================================
-    // 2. HELPER "FINDER" METHODS (Linear Search)
-    // ===================================================================
-
-    /**
-     * Finds a customer by their ID.
-     * Time Complexity: O(C) where C is the number of customers.
-     * @return Customers object or null if not found.
-     */
+    // find customer by id number
     private Customers findCustomerById(int customerId) {
         allCustomers.resetCurrent();
         while (allCustomers.hasNext()) {
@@ -304,11 +258,7 @@ public class ECommerceService {
         return null;
     }
 
-    /**
-     * Finds a product by its ID.
-     * Time Complexity: O(P) where P is the number of products.
-     * @return Products object or null if not found.
-     */
+    // find product by id number
     private Products findProductById(int productId) {
         allProducts.resetCurrent();
         while (allProducts.hasNext()) {
@@ -320,23 +270,24 @@ public class ECommerceService {
         return null;
     }
 
-    // ===================================================================
-    // 3. MAIN MENU & QUERY HANDLERS
-    // ===================================================================
-
-    /**
-     * Runs the main interactive menu for the user.
-     */
+    // menu section
+    
+    // show choices 4 user, simple menu stuff
     public void runMainMenu() {
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
-        System.out.println("\n--- E-Commerce Statistics Menu ---");
+        System.out.println("\n--- E-Commerce Management System ---");
 
         while (running) {
             System.out.println("\nPlease select an option:");
             System.out.println("  1. Suggest Top 3 Products by Rating");
             System.out.println("  2. Find All Orders Between Two Dates");
             System.out.println("  3. Find Common Highly-Rated Products Between Two Customers");
+            System.out.println("  4. Add New Product");
+            System.out.println("  5. Add New Customer");
+            System.out.println("  6. Place New Order");
+            System.out.println("  7. Add Product Review");
+            System.out.println("  8. View Customer Reviews");
             System.out.println("  0. Exit");
             System.out.print("Enter choice: ");
 
@@ -358,6 +309,21 @@ public class ECommerceService {
                 case 3:
                     handleCommonProducts(scanner);
                     break;
+                case 4:
+                    handleAddProduct(scanner);
+                    break;
+                case 5:
+                    handleAddCustomer(scanner);
+                    break;
+                case 6:
+                    handlePlaceOrder(scanner);
+                    break;
+                case 7:
+                    handleAddReview(scanner);
+                    break;
+                case 8:
+                    handleViewCustomerReviews(scanner);
+                    break;
                 case 0:
                     running = false;
                     System.out.println("Thank you. Exiting.");
@@ -366,20 +332,15 @@ public class ECommerceService {
                     System.out.println("Invalid choice. Please try again.");
             }
         }
-        // Do NOT close the scanner wrapping System.in - closing it will close System.in for the JVM.
     }
 
-    /**
-     * Handler for menu option 1. Calls the query method.
-     */
+    // first choice - get best products ya3ni
     private void handleTop3Products() {
         System.out.println("\n--- Top 3 Products by Average Rating ---");
         displayTop3ProductsByRating();
     }
 
-    /**
-     * Handler for menu option 2. Gets date input from user.
-     */
+    // second choice - user give dates wallah
     private void handleOrdersBetweenDates(Scanner scanner) {
         System.out.println("\n--- Find Orders Between Dates ---");
         try {
@@ -409,9 +370,7 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * Handler for menu option 3. Gets customer IDs from user.
-     */
+    // third choice - need 2 customer numbers habib albi
     private void handleCommonProducts(Scanner scanner) {
         System.out.println("\n--- Find Common Highly-Rated Products ---");
         try {
@@ -441,21 +400,166 @@ public class ECommerceService {
         }
     }
 
-    // ===================================================================
-    // 4. STATISTICAL QUERY METHODS (As per Project PDF)
-    // ===================================================================
+    private void handleAddProduct(Scanner scanner) {
+        System.out.println("\n--- Add New Product ---");
+        try {
+            System.out.print("Enter product ID: ");
+            int id = Integer.parseInt(scanner.nextLine());
+            
+            System.out.print("Enter product name: ");
+            String name = scanner.nextLine();
+            
+            System.out.print("Enter price: ");
+            double price = Double.parseDouble(scanner.nextLine());
+            
+            System.out.print("Enter stock quantity: ");
+            int stock = Integer.parseInt(scanner.nextLine());
+            
+            Products product = new Products(id, name, price, stock);
+            allProducts.add(product);
+            System.out.println("Product added successfully!");
+            
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid number format. Product not added.");
+        }
+    }
 
-    /**
-     * QUERY 1: Suggest "top 3 products" by average rating.
-     * * Time Complexity: O(P)
-     * - We must iterate through all P products once.
-     * - Inside the loop, getAverageRating() is O(V) where V is reviews for that
-     * product.
-     * - The comparisons and assignments are O(1).
-     * - Total complexity is O(P * V_avg), where V_avg is the average number of
-     * reviews per product. If we consider V_avg a constant factor,
-     * the complexity simplifies to O(P).
-     */
+    private void handleAddCustomer(Scanner scanner) {
+        System.out.println("\n--- Add New Customer ---");
+        try {
+            System.out.print("Enter customer ID: ");
+            int id = Integer.parseInt(scanner.nextLine());
+            
+            System.out.print("Enter customer name: ");
+            String name = scanner.nextLine();
+            
+            System.out.print("Enter customer email: ");
+            String email = scanner.nextLine();
+            
+            Customers customer = new Customers(id, name, email);
+            allCustomers.add(customer);
+            System.out.println("Customer added successfully!");
+            
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid ID format. Customer not added.");
+        }
+    }
+
+    private void handlePlaceOrder(Scanner scanner) {
+        System.out.println("\n--- Place New Order ---");
+        try {
+            System.out.print("Enter customer ID: ");
+            int custId = Integer.parseInt(scanner.nextLine());
+            Customers customer = findCustomerById(custId);
+            if (customer == null) {
+                System.out.println("Customer not found.");
+                return;
+            }
+
+            System.out.print("Enter order ID: ");
+            int orderId = Integer.parseInt(scanner.nextLine());
+
+            Orders order = new Orders(orderId, custId, LocalDate.now().toString());
+
+            while (true) {
+                System.out.print("Enter product ID (or 0 to finish): ");
+                int productId = Integer.parseInt(scanner.nextLine());
+                if (productId == 0) break;
+
+                Products product = findProductById(productId);
+                if (product == null) {
+                    System.out.println("Product not found.");
+                    continue;
+                }
+                
+                if (product.isOutOfStock()) {
+                    System.out.println("Product is out of stock.");
+                    continue;
+                }
+
+                order.addProduct(product);
+                product.updateProductsStock(product.getStock() - 1);
+            }
+
+            allOrders.add(order);
+            customer.addOrder(order);
+            System.out.println("Order placed successfully!");
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid number format. Order not placed.");
+        }
+    }
+
+    private void handleAddReview(Scanner scanner) {
+        System.out.println("\n--- Add Product Review ---");
+        try {
+            System.out.print("Enter product ID: ");
+            int productId = Integer.parseInt(scanner.nextLine());
+            Products product = findProductById(productId);
+            if (product == null) {
+                System.out.println("Product not found.");
+                return;
+            }
+
+            System.out.print("Enter customer ID: ");
+            int customerId = Integer.parseInt(scanner.nextLine());
+            if (findCustomerById(customerId) == null) {
+                System.out.println("Customer not found.");
+                return;
+            }
+
+            System.out.print("Enter review ID: ");
+            int reviewId = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("Enter rating (1-5): ");
+            int rating = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("Enter comment: ");
+            String comment = scanner.nextLine();
+
+            product.addReview(reviewId, customerId, rating, comment);
+            System.out.println("Review added successfully!");
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid number format. Review not added.");
+        }
+    }
+
+    private void handleViewCustomerReviews(Scanner scanner) {
+        System.out.println("\n--- View Customer Reviews ---");
+        try {
+            System.out.print("Enter customer ID: ");
+            int customerId = Integer.parseInt(scanner.nextLine());
+            
+            if (findCustomerById(customerId) == null) {
+                System.out.println("Customer not found.");
+                return;
+            }
+
+            System.out.println("\nReviews by customer " + customerId + ":");
+            allProducts.resetCurrent();
+            while (allProducts.hasNext()) {
+                Products product = allProducts.getNext().getData();
+                LinkedList<Reviews> reviews = product.getReviews();
+                
+                reviews.resetCurrent();
+                while (reviews.hasNext()) {
+                    Reviews review = reviews.getNext().getData();
+                    if (review.getCustomerId() == customerId) {
+                        System.out.println("Product: " + product.getName());
+                        System.out.println("Rating: " + review.getRating() + "/5");
+                        System.out.println("Comment: " + review.getComment());
+                        System.out.println();
+                    }
+                }
+            }
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid customer ID format.");
+        }
+    }
+
+    // show top 3 products, only best ones!!
     public void displayTop3ProductsByRating() {
         // We cannot sort (per project rules), so we do a single pass
         // to find the top 3.
@@ -468,6 +572,8 @@ public class ECommerceService {
         double rating2 = -1.0;
         double rating3 = -1.0;
 
+        // to check
+
         allProducts.resetCurrent();
         while (allProducts.hasNext()) {
             Products p = allProducts.getNext().getData();
@@ -479,23 +585,23 @@ public class ECommerceService {
             }
 
             if (pRating > rating1) {
-                // Shift down
+                
                 top3 = top2;
                 rating3 = rating2;
                 top2 = top1;
                 rating2 = rating1;
-                // New top
+                
                 top1 = p;
                 rating1 = pRating;
             } else if (pRating > rating2) {
-                // Shift down
+                
                 top3 = top2;
                 rating3 = rating2;
-                // New 2nd
+                
                 top2 = p;
                 rating2 = pRating;
             } else if (pRating > rating3) {
-                // New 3rd
+                
                 top3 = p;
                 rating3 = pRating;
             }
@@ -506,13 +612,7 @@ public class ECommerceService {
         System.out.println("3. " + (top3 != null ? top3.toString() : "N/A"));
     }
 
-    /**
-     * QUERY 2: Find all Orders between two dates.
-     * * Time Complexity: O(O)
-     * - We must iterate through all O orders in the master list.
-     * - The date comparison inside the loop is O(1).
-     * - Total complexity is O(O), a linear scan of all orders.
-     */
+    // search order between dates, needs sh3'ooool
     public void displayOrdersBetweenDates(LocalDate startDate, LocalDate endDate) {
         int count = 0;
         allOrders.resetCurrent();
@@ -537,21 +637,7 @@ public class ECommerceService {
         }
     }
 
-    /**
-     * QUERY 3: Given two customers IDs, show a list of common products
-     * that have been reviewed with an average rating of more than 4 out of 5.
-     *
-     * Time Complexity: O(P * V_avg)
-     * - We iterate through all P products (O(P)).
-     * - For each product, we first check its rating. This is O(V_avg), where
-     * V_avg is the average number of reviews for a product.
-     * - If the rating is > 4.0, we then iterate its reviews *again* (O(V_avg))
-     * to check if customer 1 reviewed it.
-     * - We iterate its reviews a *third* time (O(V_avg)) to check if
-     * customer 2 reviewed it.
-     * - The total complexity is O(P * (V_avg + V_avg + V_avg)),
-     * which simplifies to O(P * V_avg).
-     */
+    // find products rated >4 by both customers
     public void displayCommonProducts(int custId1, int custId2) {
         int count = 0;
         allProducts.resetCurrent();
@@ -564,7 +650,7 @@ public class ECommerceService {
                 continue; // Skip this product
             }
 
-            // 2. Check if customer 1 reviewed this product
+            // 2. Check if customer reviewed this product
             boolean cust1Reviewed = false;
             LinkedList<Reviews> reviews = product.getReviews();
             reviews.resetCurrent();
@@ -578,7 +664,7 @@ public class ECommerceService {
             // 3. If cust1 reviewed it, check if customer 2 also reviewed it
             if (cust1Reviewed) {
                 boolean cust2Reviewed = false;
-                reviews.resetCurrent(); // Must reset iterator again
+                reviews.resetCurrent();
                 while (reviews.hasNext()) {
                     if (reviews.getNext().getData().getCustomerId() == custId2) {
                         cust2Reviewed = true;

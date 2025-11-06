@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "ECommerceService",
+            "request": "launch",
+            "mainClass": "ECommerceService",
+            "projectName": "E-Commerce-CMS_b46084fe"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"

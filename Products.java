@@ -6,9 +6,8 @@ public class Products {
     private LinkedList<Reviews> reviews;
 
     public Products(int productId, String enterName, double enterPrice, int enterStock) {
-        this.productId = productId; // Assign the ID
+        this.productId = productId; 
         
-        // Validation from your constructor
         this.name = "Invalid Name"; this.price = 0.0; this.stock = 0;
         if (enterName != null) this.name = enterName;
         if (enterPrice >= 0) this.price = enterPrice;
@@ -17,16 +16,9 @@ public class Products {
         this.reviews = new LinkedList<Reviews>(); 
     }
 
-    /**
-     * Adds a new review to this product.
-     * @param reviewId ID of the review.
-     * @param customerId ID of the customer writing the review.
-     * @param rating The rating given (e.g., 1-5).
-     * @param comment The text content of the review.
-     */
+
     public void addReview(int reviewId, int customerId, int rating, String comment) {
         try {
-            // Validate rating (assume 1..5 scale)
             int r = rating;
             if (r < 1) r = 1;
             if (r > 5) r = 5;
@@ -35,15 +27,10 @@ public class Products {
             Reviews newReview = new Reviews(reviewId, this.productId, customerId, r, c);
             this.reviews.add(newReview);
         } catch (Exception e) {
-            // Catch any unexpected error when adding a review to avoid crashing the loader
             System.err.println("Failed to add review " + reviewId + " for product " + this.productId + ": " + e.getMessage());
         }
     }
 
-    /**
-     * Calculates the average rating for this product based on its reviews.
-     * @return The average rating, or 0.0 if no reviews exist.
-     */
     public double getAverageRating() {
         if (reviews.getSize() == 0) return 0.0;
         
@@ -56,11 +43,11 @@ public class Products {
             totalRating += rev.getRating();
             count++;
         }
-        // Avoid division by zero, although getSize() check mostly handles this
+        
         return (count > 0) ? (totalRating / count) : 0.0;
     }
 
-    // --- Stock Management ---
+
     public void updateProductsStock(int quantity) {
         if (quantity >= 0) {
             this.stock = quantity;
@@ -71,7 +58,6 @@ public class Products {
         return this.stock <= 0;
     }
     
-    // --- General Update ---
     public void updateProduct(String name, double price, int stock) {
         if (name != null) this.name = name;
         if (price >= 0) this.price = price;
