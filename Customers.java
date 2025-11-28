@@ -1,57 +1,84 @@
+/**
+ * Time Complexity: O(1)
+ * Space Complexity: O(1)
+ */
 public class Customers {
     private int customerId;
     private String name;
     private String email;
-    private Orders[] orders;
-    private int orderCount;
+    // --- THIS IS THE FIX ---
+    // Changed from 'Orders[] orders' to 'AVL<Integer, Orders> orders'
+    // This now uses your custom-implemented data structure.
+    private AVL<Integer, Orders> orders;
 
-    // Max orders per customer (for demo, can be increased)
-    private static final int MAX_ORDERS = 100;
+    // We no longer need orderCount, as AVL has getSize()
 
     public Customers(int customerId, String name, String email) {
         this.customerId = customerId;
         this.name = name;
         this.email = email;
-        this.orders = new Orders[MAX_ORDERS];
-        this.orderCount = 0;
+        // Initialize the custom AVL
+        this.orders = new AVL<>();
     }
 
-    // Register new order for this customer
-    // O(1) time
+    /**
+     * Time Complexity: O(log N) (N = orders)
+     * Space Complexity: O(log N)
+     */
     public boolean addOrder(Orders order) {
-        if (order == null || orderCount >= MAX_ORDERS) return false;
-        orders[orderCount++] = order;
+        if (order == null) return false;
+        orders.insert(order.getOrderId(), order);
         return true;
     }
 
-    // Get order history as a String
-    // O(n) time, n = orderCount
+    /**
+     * Time Complexity: O(N) (N = orders)
+     * Space Complexity: O(N)
+     */
     public String getOrderHistory() {
-        if (orderCount == 0) return "No orders.";
+        if (orders.getSize() == 0) return "No orders.";
+        
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < orderCount; i++) {
-            sb.append("Order #").append(i + 1).append(": ").append(orders[i].toString());
-            if (i < orderCount - 1) sb.append(System.lineSeparator());
+        int orderNum = 1;
+        
+        for (Orders order : orders.inOrderTraversal()) {
+            sb.append("Order #").append(orderNum++).append(": ").append(order.toString());
+            sb.append(System.lineSeparator());
         }
         return sb.toString();
     }
 
-    // Get number of orders
+    /**
+     * Time Complexity: O(1)
+     * Space Complexity: O(1)
+     */
     public int getOrderCount() {
-        return orderCount;
+        return orders.getSize();
     }
 
-    // Search for order by ID (linear search)
-    // O(n) time
+    /**
+     * Time Complexity: O(log N) (N = orders)
+     * Space Complexity: O(log N)
+     */
     public Orders getOrderById(int orderId) {
-        for (int i = 0; i < orderCount; i++) {
-            if (orders[i].getOrderId() == orderId) return orders[i];
-        }
-        return null;
+        return orders.search(orderId);
+    }
+    
+    /**
+     * Time Complexity: O(1)
+     * Space Complexity: O(1)
+     */
+    public AVL<Integer, Orders> getOrders() {
+        return orders;
     }
 
-    // Getters
+    // --- Getters ---
     public int getCustomerId() { return customerId; }
     public String getName() { return name; }
     public String getEmail() { return email; }
+
+    @Override
+    public String toString() {
+        return String.format("Customer ID: %d, Name: %s, Email: %s", customerId, name, email);
+    }
 }
